@@ -2289,9 +2289,7 @@ class TestTTSMethods:
         assert params["non_streaming_mode"] == [True]
         assert "full_utterance_decode" not in params
 
-    def test_build_tts_params_streaming_customvoice_explicit_non_streaming_mode_still_windowed(
-        self, speech_server
-    ):
+    def test_build_tts_params_streaming_customvoice_explicit_non_streaming_mode_still_windowed(self, speech_server):
         """Explicit non_streaming_mode=True must not inject full_utterance_decode."""
         req = OpenAICreateSpeechRequest(
             input="Hello",
