@@ -32,12 +32,14 @@ _FRAME = [1, 2, 3, 4]
 _Q = len(_FRAME)
 
 
-def _req(rid, *, finished, initial_codec_chunk_frames=None, non_streaming_mode=None):
+def _req(rid, *, finished, initial_codec_chunk_frames=None, non_streaming_mode=None, full_utterance_decode=None):
     entries = {}
     if initial_codec_chunk_frames is not None:
         entries["initial_codec_chunk_frames"] = SimpleNamespace(list_data=[initial_codec_chunk_frames])
     if non_streaming_mode is not None:
         entries["non_streaming_mode"] = SimpleNamespace(list_data=[non_streaming_mode])
+    if full_utterance_decode is not None:
+        entries["full_utterance_decode"] = SimpleNamespace(list_data=[full_utterance_decode])
     ai = SimpleNamespace(entries=entries) if entries else None
     return SimpleNamespace(
         external_req_id=rid,
@@ -125,26 +127,26 @@ def test_flush_on_finish():
     assert len(p.codes.audio) == _Q * 24
 
 
-def test_non_streaming_mode_defers_until_finished():
-    """non_streaming_mode=True should not emit windowed chunks mid-utterance (#4371)."""
+def test_full_utterance_decode_defers_until_finished():
+    """full_utterance_decode=True should not emit windowed chunks mid-utterance (#4371)."""
     tm = _tm()
     tm.code_prompt_token_ids["r"] = [_FRAME[:] for _ in range(50)]
     p = talker2code2wav_async_chunk(
         transfer_manager=tm,
         multimodal_output=None,
-        request=_req("r", finished=False, non_streaming_mode=True),
+        request=_req("r", finished=False, full_utterance_decode=True),
         is_finished=False,
     )
     assert p is None
 
 
-def test_non_streaming_mode_emits_full_utterance_on_finish():
+def test_full_utterance_decode_emits_full_utterance_on_finish():
     tm = _tm()
     tm.code_prompt_token_ids["r"] = [_FRAME[:] for _ in range(50)]
     p = talker2code2wav_async_chunk(
         transfer_manager=tm,
         multimodal_output=None,
-        request=_req("r", finished=True, non_streaming_mode=True),
+        request=_req("r", finished=True, full_utterance_decode=True),
         is_finished=True,
     )
     assert p is not None
@@ -152,7 +154,7 @@ def test_non_streaming_mode_emits_full_utterance_on_finish():
     assert len(p.codes.audio) == _Q * 50
 
 
-def test_non_streaming_mode_false_keeps_windowed_emit():
+def test_full_utterance_decode_false_keeps_windowed_emit():
     # Dynamic IC defers emit at 25 frames (see _CASES); 41 hits the first
     # steady-state window boundary and proves streaming path is unchanged.
     tm = _tm()
@@ -160,7 +162,44 @@ def test_non_streaming_mode_false_keeps_windowed_emit():
     p = talker2code2wav_async_chunk(
         transfer_manager=tm,
         multimodal_output={"codes": {"audio": torch.zeros((0,))}},
-        request=_req("r", finished=False, non_streaming_mode=False),
+        request=_req("r", finished=False, full_utterance_decode=False),
+        is_finished=False,
+    )
+    assert p is not None
+    assert len(p.codes.audio) == _Q * 25
+
+
+def test_non_streaming_mode_alone_does_not_defer_async_chunk():
+    """Prompt-mode non_streaming_mode must not gate Code2Wav emits (#6898).
+
+    VoiceDesign serving defaults non_streaming_mode=True even for streaming
+    responses; those requests still need windowed async-chunk audio for TTFA.
+    """
+    tm = _tm()
+    tm.code_prompt_token_ids["r"] = [_FRAME[:] for _ in range(41)]
+    p = talker2code2wav_async_chunk(
+        transfer_manager=tm,
+        multimodal_output={"codes": {"audio": torch.zeros((0,))}},
+        request=_req("r", finished=False, non_streaming_mode=True),
+        is_finished=False,
+    )
+    assert p is not None
+    assert len(p.codes.audio) == _Q * 25
+
+
+def test_voicedesign_prompt_mode_with_streaming_keeps_windowed_emit():
+    """Streaming VoiceDesign-style defaults: prompt-mode True, decode False."""
+    tm = _tm()
+    tm.code_prompt_token_ids["r"] = [_FRAME[:] for _ in range(41)]
+    p = talker2code2wav_async_chunk(
+        transfer_manager=tm,
+        multimodal_output={"codes": {"audio": torch.zeros((0,))}},
+        request=_req(
+            "r",
+            finished=False,
+            non_streaming_mode=True,
+            full_utterance_decode=False,
+        ),
         is_finished=False,
     )
     assert p is not None

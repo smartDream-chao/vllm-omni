@@ -104,12 +104,16 @@ def extract_speaker_from_prompt(
 
 
 # =============================================================================
-# Prompt construction mode helpers
+# Code2Wav emit-mode helpers (independent of prompt construction)
 # =============================================================================
 
 
-def extract_non_streaming_mode_from_request(request: Any) -> bool | None:
-    """Extract ``non_streaming_mode`` from a request's additional_information.
+def extract_full_utterance_decode_from_request(request: Any) -> bool | None:
+    """Extract ``full_utterance_decode`` from a request's additional_information.
+
+    This is a *response / Code2Wav emit* intent flag. It must not be confused
+    with ``non_streaming_mode``, which only controls Qwen3-TTS prompt
+    construction and is independent of HTTP/WebSocket streaming (#4198).
 
     Returns:
         True/False when explicitly set, otherwise None.
@@ -120,7 +124,7 @@ def extract_non_streaming_mode_from_request(request: Any) -> bool | None:
     entries = getattr(additional_information, "entries", None)
     if not isinstance(entries, dict):
         return None
-    entry = entries.get("non_streaming_mode")
+    entry = entries.get("full_utterance_decode")
     if entry is None:
         return None
     list_data = getattr(entry, "list_data", None)

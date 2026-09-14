@@ -166,6 +166,10 @@ def get_custom_voice_query(use_batch_sample: bool = False) -> QueryResult:
                 "language": [language],
                 "speaker": [speaker],
                 "max_new_tokens": [2048],
+                # Offline has no HTTP streaming response; prefer one Code2Wav
+                # decode under deploy.async_chunk (#4371). Independent of
+                # prompt-mode non_streaming_mode (#4198 / #6898).
+                "full_utterance_decode": [True],
             }
             inputs.append(
                 {
@@ -185,6 +189,7 @@ def get_custom_voice_query(use_batch_sample: bool = False) -> QueryResult:
             "speaker": [speaker],
             "instruct": [instruct],
             "max_new_tokens": [2048],
+            "full_utterance_decode": [True],
         }
         inputs = {
             "prompt_token_ids": [0] * _estimate_prompt_len(additional_information, model_name),
@@ -226,6 +231,7 @@ def get_voice_design_query(use_batch_sample: bool = False) -> QueryResult:
                 "instruct": [instruct],
                 "max_new_tokens": [2048],
                 "non_streaming_mode": [True],
+                "full_utterance_decode": [True],
             }
             inputs.append(
                 {
@@ -244,6 +250,7 @@ def get_voice_design_query(use_batch_sample: bool = False) -> QueryResult:
             "instruct": [instruct],
             "max_new_tokens": [2048],
             "non_streaming_mode": [True],
+            "full_utterance_decode": [True],
         }
         inputs = {
             "prompt_token_ids": [0] * _estimate_prompt_len(additional_information, model_name),
@@ -291,6 +298,7 @@ def get_base_query(use_batch_sample: bool = False, mode_tag: str = "icl") -> Que
                 "language": [language],
                 "x_vector_only_mode": [x_vector_only_mode],
                 "max_new_tokens": [2048],
+                "full_utterance_decode": [True],
             }
             inputs.append(
                 {
@@ -307,6 +315,7 @@ def get_base_query(use_batch_sample: bool = False, mode_tag: str = "icl") -> Que
             "language": [syn_lang_single],
             "x_vector_only_mode": [x_vector_only_mode],
             "max_new_tokens": [2048],
+            "full_utterance_decode": [True],
         }
         inputs = {
             "prompt_token_ids": [0] * _estimate_prompt_len(additional_information, model_name),
