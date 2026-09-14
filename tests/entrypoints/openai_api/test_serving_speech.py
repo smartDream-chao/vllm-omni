@@ -2241,7 +2241,7 @@ class TestTTSMethods:
 
         assert params["task_type"] == ["Base"]
         assert params["non_streaming_mode"] == [True]
-        assert params["full_utterance_decode"] == [True]
+        assert "full_utterance_decode" not in params
 
     def test_build_tts_params_base_omits_non_streaming_mode_by_default(self, speech_server):
         """Base task should keep using the model default when no override is sent."""
@@ -2256,7 +2256,7 @@ class TestTTSMethods:
 
         assert params["task_type"] == ["Base"]
         assert "non_streaming_mode" not in params
-        assert params["full_utterance_decode"] == [True]
+        assert "full_utterance_decode" not in params
 
     def test_build_tts_params_explicit_non_streaming_mode_overrides_voicedesign_default(self, speech_server):
         """Explicit false should not be replaced by the VoiceDesign fallback."""
@@ -2271,10 +2271,10 @@ class TestTTSMethods:
 
         assert params["task_type"] == ["VoiceDesign"]
         assert params["non_streaming_mode"] == [False]
-        assert params["full_utterance_decode"] == [True]
+        assert "full_utterance_decode" not in params
 
     def test_build_tts_params_streaming_voicedesign_keeps_prompt_mode_not_full_decode(self, speech_server):
-        """Streaming VoiceDesign defaults: prompt-mode True, full_utterance_decode False."""
+        """Streaming VoiceDesign defaults: prompt-mode True, no full_utterance_decode."""
         req = OpenAICreateSpeechRequest(
             input="Hello",
             task_type="VoiceDesign",
@@ -2287,12 +2287,12 @@ class TestTTSMethods:
 
         assert params["task_type"] == ["VoiceDesign"]
         assert params["non_streaming_mode"] == [True]
-        assert params["full_utterance_decode"] == [False]
+        assert "full_utterance_decode" not in params
 
     def test_build_tts_params_streaming_customvoice_explicit_non_streaming_mode_still_windowed(
         self, speech_server
     ):
-        """Explicit non_streaming_mode=True must not force full decode on streaming."""
+        """Explicit non_streaming_mode=True must not inject full_utterance_decode."""
         req = OpenAICreateSpeechRequest(
             input="Hello",
             voice="Vivian",
@@ -2304,7 +2304,7 @@ class TestTTSMethods:
         params = speech_server._build_tts_params(req)
 
         assert params["non_streaming_mode"] == [True]
-        assert params["full_utterance_decode"] == [False]
+        assert "full_utterance_decode" not in params
 
     def test_load_supported_speakers(self, mocker: MockerFixture):
         """Test _load_supported_speakers."""
@@ -5323,16 +5323,16 @@ class TestTTSAsyncOffloading:
 
         assert tts_params["task_type"] == ["VoiceDesign"]
         assert tts_params["non_streaming_mode"] == [False]
-        assert tts_params["full_utterance_decode"] == [True]
+        assert "full_utterance_decode" not in tts_params
         prompt = qwen3_tts_server.engine_client.generate.call_args.kwargs["prompt"]
         assert prompt["additional_information"] is tts_params
         assert prompt["additional_information"]["non_streaming_mode"] == [False]
-        assert prompt["additional_information"]["full_utterance_decode"] == [True]
+        assert "full_utterance_decode" not in prompt["additional_information"]
 
     def test_prepare_speech_generation_qwen3_streaming_voicedesign_default_params(
         self, qwen3_tts_server, mocker: MockerFixture
     ):
-        """Streaming VoiceDesign defaults keep prompt-mode True but windowed Code2Wav."""
+        """Streaming VoiceDesign defaults keep prompt-mode True without full_utterance_decode."""
         qwen3_tts_server._validate_tts_request = mocker.MagicMock(return_value=None)
         qwen3_tts_server._estimate_prompt_len_async = mocker.AsyncMock(return_value=512)
 
@@ -5347,10 +5347,10 @@ class TestTTSAsyncOffloading:
 
         assert tts_params["task_type"] == ["VoiceDesign"]
         assert tts_params["non_streaming_mode"] == [True]
-        assert tts_params["full_utterance_decode"] == [False]
+        assert "full_utterance_decode" not in tts_params
         prompt = qwen3_tts_server.engine_client.generate.call_args.kwargs["prompt"]
         assert prompt["additional_information"]["non_streaming_mode"] == [True]
-        assert prompt["additional_information"]["full_utterance_decode"] == [False]
+        assert "full_utterance_decode" not in prompt["additional_information"]
 
     def test_prepare_speech_generation_qwen3_base_non_streaming_mode_true(
         self, qwen3_tts_server, mocker: MockerFixture
@@ -5373,11 +5373,11 @@ class TestTTSAsyncOffloading:
         assert tts_params["task_type"] == ["Base"]
         assert tts_params["ref_text"] == ["reference transcript"]
         assert tts_params["non_streaming_mode"] == [True]
-        assert tts_params["full_utterance_decode"] == [True]
+        assert "full_utterance_decode" not in tts_params
         prompt = qwen3_tts_server.engine_client.generate.call_args.kwargs["prompt"]
         assert prompt["additional_information"] is tts_params
         assert prompt["additional_information"]["non_streaming_mode"] == [True]
-        assert prompt["additional_information"]["full_utterance_decode"] == [True]
+        assert "full_utterance_decode" not in prompt["additional_information"]
 
     def test_qwen3_repeated_ref_audio_hot_path_sends_cache_key_without_waveform(self, qwen3_tts_server):
         """After a ref artifact is marked ready, repeated requests avoid ref_audio payload IPC."""

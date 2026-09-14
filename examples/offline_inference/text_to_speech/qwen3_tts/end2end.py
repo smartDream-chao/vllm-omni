@@ -166,9 +166,8 @@ def get_custom_voice_query(use_batch_sample: bool = False) -> QueryResult:
                 "language": [language],
                 "speaker": [speaker],
                 "max_new_tokens": [2048],
-                # Offline has no HTTP streaming response; prefer one Code2Wav
-                # decode under deploy.async_chunk (#4371). Independent of
-                # prompt-mode non_streaming_mode (#4198 / #6898).
+                # Optional Code2Wav emit opt-in under deploy.async_chunk.
+                # Independent of prompt-mode non_streaming_mode (#4198 / #6898).
                 "full_utterance_decode": [True],
             }
             inputs.append(
